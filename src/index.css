@@ -24,6 +24,14 @@
   .soft-shadow {
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 body {

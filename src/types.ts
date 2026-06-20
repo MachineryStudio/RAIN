@@ -11,6 +11,7 @@ export enum Language {
   IT = 'it',
   KO = 'ko',
   ZH = 'zh',
+  RU = 'ru',
 }
 
 export type MultiLangString = {
@@ -25,7 +26,7 @@ export interface Song {
   artistOfficialUrl: string;
   albumArtUrl?: string;
   albumName?: MultiLangString;
-  releaseDate: any; // Firestore Timestamp
+  releaseDate: unknown; // Firestore Timestamp
   duration: number; // seconds
   genres: string[];
   tags: string[];
@@ -33,8 +34,8 @@ export interface Song {
   playCount: number;
   skipCount: number;
   avgListenDuration: number;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: unknown;
+  updatedAt: unknown;
   isActive: boolean;
 }
 
@@ -59,3 +60,13 @@ export interface UserProfile {
   raiTokens: number;
   totalListenMinutes: number;
 }
+
+export interface MusicDatabase {
+  id: string;
+  name: string;
+  description: string;
+  filterType: 'all' | 'band' | 'genre' | 'none';
+  filterValue: string;
+  createdAt: string;
+}
+
