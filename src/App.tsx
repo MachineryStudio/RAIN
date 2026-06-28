@@ -864,7 +864,7 @@ function MainLayout() {
             )}
 
             {currentView === 'raion_fm' && (
-              <RaionRadioView songs={songs} onPlaySong={handlePlaySong} />
+              <RaionRadioView songs={songs} onPlaySong={handlePlaySong} isAdmin={!!profile?.isAdmin} />
             )}
 
             {currentView === 'settings' && (

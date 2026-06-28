@@ -12,6 +12,7 @@ import { Song } from '../types.ts';
 interface RaionRadioViewProps {
   songs: Song[];
   onPlaySong: (song: Song) => void;
+  isAdmin?: boolean;
 }
 
 interface ScriptSection {
@@ -21,9 +22,10 @@ interface ScriptSection {
   action: string;
 }
 
-export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProps) {
+export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: RaionRadioViewProps) {
   // --- STATE ---
   const [frequency, setFrequency] = useState<number>(88.3);
+  const [band, setBand] = useState<'FM' | 'AM'>('FM');
   const [stationTagline, setStationTagline] = useState<string>('Thunderous Sound, Midnight Echoes');
   const [stationSlogan, setStationSlogan] = useState<string>("Broadcasting from Tokyo's neon heart at 2 AM. Your late-night sanctuary of Synthwave, Lo-fi, and J-Pop.");
   const [djName, setDjName] = useState<string>('DJ Raion');
@@ -36,11 +38,26 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
   const [currentScriptIndex, setCurrentScriptIndex] = useState<number>(0);
   const [speechText, setSpeechText] = useState<string>('');
   
+  // Admin Script Edit overrides
+  const [stepIntro, setStepIntro] = useState<string>('');
+  const [stepFeatured, setStepFeatured] = useState<string>('');
+  const [stepInterlude, setStepInterlude] = useState<string>('');
+  const [stepOutro, setStepOutro] = useState<string>('');
+  const [isEditingScripts, setIsEditingScripts] = useState<boolean>(false);
+
   // Audio state
   const [activeTab, setActiveTab] = useState<'station' | 'transmitter' | 'melodies'>('station');
   const [synthType, setSynthType] = useState<'guitar' | 'retro-8bit'>('guitar');
 
   const featuredSong = songs.find(s => s.id === selectedSongId) || songs.find(s => s.id === 'suno-invisible') || songs[0];
+
+  const defaultIntroText = `Midnight static clearing out... You are listening to RAION 雷音 ${band}, broadcasting live on frequency ${band === 'FM' ? `${frequency.toFixed(1)} Megahertz` : `${Math.round(frequency)} Kilohertz`}, here in the glowing heart of Tokyo. I am your host, ${djName}, coming to you at exactly 2:00 AM under a shroud of neon mist. Our tagline tonight as always: ${stationTagline}. Sit back, sink in, and let normal reality dissolve.`;
+  
+  const defaultFeaturedText = `Let's dive directly into tonight's cosmic centerpiece. From our select database registries, we are spinning the legendary Suno classic, "${featuredSong?.songName?.en || 'Invisible'}" by ${featuredSong?.singerName?.en || 'lightyAndrei'}. This track is a masterclass in visual-kei melancholia, blending majestic synths with a driving heartbeat of soaring minor key chord progressions. We are skipping the heavy lyrical analysis to let the sheer raw melody take your mind. Listen...`;
+
+  const defaultInterludeText = `That ethereal atmosphere, that dense retro guitar drive... absolutely sublime. It's why this sound is breaking borders. For our listeners in North America, this evokes the cyberpunk noir of midnight highways. For our massive crowd in South America, it is pure visual stadium energy. It is universal. No translations required when the melody is this pure.`;
+
+  const defaultOutroText = `Thank you for tuning in to this hour's frequency. Up next is the continuous streaming catalog. This is ${djName}, signing off from RAION 雷音, where midnight never ends. Stay electric.`;
 
   // Dynamic show scripts based on selected featured song
   const generatedScript: ScriptSection[] = [
@@ -48,25 +65,25 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
       title: '1. INTRO & STATION ID',
       timeRange: '0:00 - 0:30',
       action: '🎵 [Signature RAION 8-bit Orchestral Jingle echoes. Cozy rain static in background.] ⛈️',
-      text: `Midnight static clearing out... You are listening to RAION 雷音 FM, broadcasting live on frequency ${frequency} Megahertz, here in the glowing heart of Tokyo. I am your host, ${djName}, coming to you at exactly 2:00 AM under a shroud of neon mist. Our tagline tonight as always: ${stationTagline}. Sit back, sink in, and let normal reality dissolve.`
+      text: stepIntro ? stepIntro : defaultIntroText
     },
     {
       title: '2. FEATURED SONG INTRODUCTION',
       timeRange: '0:30 - 1:15',
       action: '🎚️ [Background atmospheric synthesizers fade to low volume.] 🌌',
-      text: `Let's dive directly into tonight's cosmic centerpiece. From our select database registries, we are spinning the legendary Suno classic, "${featuredSong?.songName?.en || 'Invisible'}" by ${featuredSong?.singerName?.en || 'lightyAndrei'}. This track is a masterclass in visual-kei melancholia, blending majestic synths with a driving heartbeat of soaring minor key chord progressions. We are skipping the heavy lyrical analysis to let the sheer raw melody take your mind. Listen...`
+      text: stepFeatured ? stepFeatured : defaultFeaturedText
     },
     {
       title: '3. STATION INTERLUDE & TRANSLATION REMARKS',
       timeRange: '1:15 - 1:45',
       action: '💬 [Deep bass pad hum. Neon speaker wave pulses gently.] 📺',
-      text: `That ethereal atmosphere, that dense retro guitar drive... absolutely sublime. It's why this sound is breaking borders. For our listeners in North America, this evokes the cyberpunk noir of midnight highways. For our massive crowd in South America, it is pure visual stadium energy. It is universal. No translations required when the melody is this pure.`
+      text: stepInterlude ? stepInterlude : defaultInterludeText
     },
     {
       title: '4. SIGN-OFF & OUTRO',
       timeRange: '1:45 - 2:15',
       action: '🛸 [AI Host steps back. Fading speech block to full track stream.] 🔋',
-      text: `Thank you for tuning in to this hour's frequency. Up next is the continuous streaming catalog. This is ${djName}, signing off from RAION 雷音, where midnight never ends. Stay electric.`
+      text: stepOutro ? stepOutro : defaultOutroText
     }
   ];
 
@@ -81,6 +98,16 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
       }
     };
   }, []);
+
+  // Autoplay the featured song when the Radio FM view is on / active
+  useEffect(() => {
+    if (featuredSong) {
+      const timer = setTimeout(() => {
+        onPlaySong(featuredSong);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [featuredSong]);
 
   // Play custom synthesized 8-Bit + Orchestral Station Jingle with Web Audio API!
   const playSignatureJingle = (callback?: () => void) => {
@@ -237,6 +264,11 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
 
     setIsBroadcasting(true);
     setCurrentScriptIndex(0);
+    
+    // Automatically trigger/ensure the high-quality MP3 audio is playing when broadcast starts
+    if (featuredSong) {
+      onPlaySong(featuredSong);
+    }
     
     // Step A: Play signature jingle chiptune first!
     playSignatureJingle(() => {
@@ -455,7 +487,22 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
 
             {/* Active Script Roadmap */}
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Active Program Script Schedule</h4>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Active Program Script Schedule</h4>
+                {isAdmin && (
+                  <button
+                    onClick={() => setIsEditingScripts(!isEditingScripts)}
+                    className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      isEditingScripts
+                        ? 'bg-emerald-500 text-white shadow-emerald-500/20 shadow-md'
+                        : 'bg-cyan-100 text-[#293556] border border-cyan-200/50 hover:bg-cyan-200'
+                    }`}
+                  >
+                    {isEditingScripts ? '💾 Save & Apply Script' : '✏️ Modify AI Script'}
+                  </button>
+                )}
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {generatedScript.map((step, idx) => {
                   const isActive = isBroadcasting && currentScriptIndex === idx;
@@ -464,13 +511,40 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
                       key={idx} 
                       className={`p-5 rounded-3xl border-2 transition-all flex flex-col justify-between ${isActive ? 'bg-cyan-50/40 border-cyan-400 ring-2 ring-cyan-200' : 'bg-zinc-50/50 border-zinc-100'}`}
                     >
-                      <div className="space-y-2">
+                      <div className="space-y-2 w-full">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[9px] font-black uppercase text-[#293556] bg-cyan-100/60 px-2.5 py-0.5 rounded-full">{step.title}</span>
                           <span className="text-[8px] font-mono font-bold text-zinc-400 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">{step.timeRange}</span>
                         </div>
                         <p className="text-[9px] font-bold text-[#A0886F] uppercase tracking-wider italic">{step.action}</p>
-                        <p className="text-xs text-zinc-700 leading-relaxed font-bold">{step.text}</p>
+                        
+                        {isEditingScripts ? (
+                          <div className="mt-2 space-y-1 w-full">
+                            <textarea
+                              className="w-full bg-white border border-zinc-200 rounded-2xl p-3 text-xs text-zinc-800 font-bold focus:outline-none focus:ring-2 focus:ring-cyan-500 font-sans"
+                              rows={4}
+                              value={
+                                idx === 0 ? stepIntro :
+                                idx === 1 ? stepFeatured :
+                                idx === 2 ? stepInterlude :
+                                stepOutro
+                              }
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (idx === 0) setStepIntro(val);
+                                else if (idx === 1) setStepFeatured(val);
+                                else if (idx === 2) setStepInterlude(val);
+                                else setStepOutro(val);
+                              }}
+                              placeholder="Describe customized DJ broadcast command speech here..."
+                            />
+                            <p className="text-[8px] text-zinc-400 font-medium italic">
+                              Overridden text when speaking. Clear text to restore station's dynamic auto-template.
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-zinc-700 leading-relaxed font-bold">{step.text}</p>
+                        )}
                       </div>
                     </div>
                   );
@@ -549,29 +623,82 @@ export default function RaionRadioView({ songs, onPlaySong }: RaionRadioViewProp
             </div>
 
             {/* Slider frequency selector */}
-            <div className="pt-4 border-t border-zinc-100 space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Modulate Transmitter Frequency</label>
-                <span className="text-xs font-mono font-black text-cyan-600 bg-cyan-50 px-2.5 py-0.5 rounded-full">{frequency.toFixed(1)} MHz FM</span>
+            <div className="pt-4 border-t border-zinc-100 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-zinc-400 tracking-wider block">Modulate Transmitter Frequency</label>
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase">Toggle between FM and AM broadcasting bands</p>
+                </div>
+                
+                {/* Select Radio Band */}
+                <div className="flex items-center gap-1.5 bg-zinc-100 p-1.5 rounded-2xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBand('FM');
+                      setFrequency(88.3);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      band === 'FM'
+                        ? 'bg-[#293556] text-white shadow-sm'
+                        : 'text-[#293556] hover:bg-zinc-200'
+                    }`}
+                  >
+                    FM Band
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBand('AM');
+                      setFrequency(880);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      band === 'AM'
+                        ? 'bg-[#293556] text-white shadow-sm'
+                        : 'text-[#293556] hover:bg-zinc-200'
+                    }`}
+                  >
+                    AM Band
+                  </button>
+                </div>
               </div>
+
+              <div className="flex justify-between items-center bg-zinc-50 p-4 rounded-3xl border border-zinc-100/60">
+                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active Frequency Mode</span>
+                <span className="text-xs font-mono font-black text-cyan-600 bg-cyan-50 px-3.5 py-1 rounded-full">
+                  {band === 'FM' ? `${frequency.toFixed(1)} MHz` : `${Math.round(frequency)} kHz`} {band}
+                </span>
+              </div>
+
               <input 
                 type="range"
                 className="w-full h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer accent-[#293556]"
-                min={87.5}
-                max={108.0}
-                step={0.1}
+                min={band === 'FM' ? 87.5 : 530}
+                max={band === 'FM' ? 108.0 : 1700}
+                step={band === 'FM' ? 0.1 : 10}
                 value={frequency}
                 onChange={e => {
                   const val = parseFloat(e.target.value);
                   setFrequency(val);
                   // Play a small static synth sound
-                  handlePlayTone(900 - val * 4);
+                  const mockPitch = band === 'FM' ? (900 - val * 4) : (1000 - val * 0.4);
+                  handlePlayTone(mockPitch);
                 }}
               />
               <div className="flex justify-between text-[8px] font-mono font-black text-zinc-400 uppercase tracking-widest px-1">
-                <span>87.5 MHz (Lo-Fi Core)</span>
-                <span>98.0 mHz</span>
-                <span>108.0 MHz (Studio Visual)</span>
+                {band === 'FM' ? (
+                  <>
+                    <span>87.5 MHz (Lo-Fi Core)</span>
+                    <span>98.0 MHz</span>
+                    <span>108.0 MHz (Studio Visual)</span>
+                  </>
+                ) : (
+                  <>
+                    <span>530 kHz (Late Night)</span>
+                    <span>1000 kHz</span>
+                    <span>1700 kHz (Saturated High)</span>
+                  </>
+                )}
               </div>
             </div>
 
