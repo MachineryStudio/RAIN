@@ -53,7 +53,7 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
 
   const defaultIntroText = `Midnight static clearing out... You are listening to RAION 雷音 ${band}, broadcasting live on frequency ${band === 'FM' ? `${frequency.toFixed(1)} Megahertz` : `${Math.round(frequency)} Kilohertz`}, here in the glowing heart of Tokyo. I am your host, ${djName}, coming to you at exactly 2:00 AM under a shroud of neon mist. Our tagline tonight as always: ${stationTagline}. Sit back, sink in, and let normal reality dissolve.`;
   
-  const defaultFeaturedText = `Let's dive directly into tonight's cosmic centerpiece. From our select database registries, we are spinning the legendary Suno classic, "${featuredSong?.songName?.en || 'Invisible'}" by ${featuredSong?.singerName?.en || 'lightyAndrei'}. This track is a masterclass in visual-kei melancholia, blending majestic synths with a driving heartbeat of soaring minor key chord progressions. We are skipping the heavy lyrical analysis to let the sheer raw melody take your mind. Listen...`;
+  const defaultFeaturedText = `Let's dive directly into tonight's cosmic centerpiece. From our select database registries, we are spinning the legendary classic, "${featuredSong?.songName?.en || 'Descending Love'}" by ${featuredSong?.singerName?.en || 'アンドレ (曇りの断層)'}. This track is a masterclass in visual-kei melancholia, blending majestic synths with a driving heartbeat of soaring minor key chord progressions. We are skipping the heavy lyrical analysis to let the sheer raw melody take your mind. Listen...`;
 
   const defaultInterludeText = `That ethereal atmosphere, that dense retro guitar drive... absolutely sublime. It's why this sound is breaking borders. For our listeners in North America, this evokes the cyberpunk noir of midnight highways. For our massive crowd in South America, it is pure visual stadium energy. It is universal. No translations required when the melody is this pure.`;
 
@@ -82,7 +82,7 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
     {
       title: '4. SIGN-OFF & OUTRO',
       timeRange: '1:45 - 2:15',
-      action: '🛸 [AI Host steps back. Fading speech block to full track stream.] 🔋',
+      action: '🛸 [Host steps back. Fading speech block to full track stream.] 🔋',
       text: stepOutro ? stepOutro : defaultOutroText
     }
   ];
@@ -301,14 +301,22 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
     utterance.pitch = pitch; 
     utterance.rate = speed;
 
-    // Pick a masculine or cozy voice if possible
+    // Pick a masculine or cozy voice if possible, with support for Japanese language if requested
     const voices = window.speechSynthesis.getVoices();
-    // Prefer English/Japanese depending on text, standard english is best for general show host
-    const englishVoice = voices.find(v => v.lang.startsWith('en-') && v.name.toLowerCase().includes('google')) 
-                         || voices.find(v => v.lang.startsWith('en-'))
-                         || voices[0];
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+    const isJapaneseText = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(textToSpeak);
+    
+    let selectedVoice = null;
+    if (isJapaneseText) {
+      selectedVoice = voices.find(v => v.lang.startsWith('ja-') || v.lang.includes('ja'));
+    }
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.startsWith('en-') && v.name.toLowerCase().includes('google')) 
+                     || voices.find(v => v.lang.startsWith('en-'))
+                     || voices[0];
+    }
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      utterance.lang = selectedVoice.lang;
     }
 
     utterance.onend = () => {
@@ -326,9 +334,9 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
     window.speechSynthesis.speak(utterance);
   };
 
-  // Interactive Melody notes array mapping for "Invisible" main guitar riff (C minor)
+  // Interactive Melody notes array mapping for "DESCENDING LOVE" main guitar riff (C minor)
   // Verse hook notes: C4, D4, Eb4, G4, Ab4, G4, F4, Eb4, C4, G3
-  const invisibleNotes = [
+  const descendingLoveNotes = [
     { label: 'C4', freq: 261.63, tag: 'Tonic' },
     { label: 'D4', freq: 293.66, tag: 'Step' },
     { label: 'Eb4', freq: 311.13, tag: 'Minor 3rd' },
@@ -343,15 +351,15 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
 
   // Auto playback the full melody hook loop in perfect timing!
   const [isPlayingMelodyLoop, setIsPlayingMelodyLoop] = useState(false);
-  const playInvisibleMelodyHook = () => {
+  const playDescendingLoveMelodyHook = () => {
     if (isPlayingMelodyLoop) return;
     setIsPlayingMelodyLoop(true);
     
     const duration = 280; // timing tick in ms
-    invisibleNotes.forEach((note, idx) => {
+    descendingLoveNotes.forEach((note, idx) => {
       setTimeout(() => {
         handlePlayTone(note.freq);
-        if (idx === invisibleNotes.length - 1) {
+        if (idx === descendingLoveNotes.length - 1) {
           setIsPlayingMelodyLoop(false);
         }
       }, idx * duration);
@@ -502,6 +510,37 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
                   </button>
                 )}
               </div>
+
+              {/* Admin DJ Presets selection */}
+              {isAdmin && (
+                <div className="flex flex-wrap items-center gap-2 bg-slate-550/10 bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+                  <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">DJ Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStepIntro('');
+                      setStepFeatured('');
+                      setStepInterlude('');
+                      setStepOutro('');
+                    }}
+                    className="px-3 py-1 rounded-xl bg-white border border-zinc-200 hover:bg-zinc-50 text-[9px] font-bold text-[#293556] transition-all cursor-pointer"
+                  >
+                    🔄 Default Midnight
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStepIntro('うわ、雷音だ！⚡ かっこいいバンドじゃん✨ クモルのプロジェクトとして「曇りの断層」をやってるんだね。メンバーも紹介してくれてありがと〜');
+                      setStepFeatured('メンバーを紹介するよ！ボーカルとギターのANDREE（アンドレ）、ベースのMARO（真人）、リードギターのREN（蓮）、そしてドラムのPIKAS（ピカス）！って感じの最高にかっこいい布陣なんだよね。');
+                      setStepInterlude('で、聞かせて？これ何に使うの？📝 プロフィールや紹介文を書く？曲やアルバムのコンセプト作り？ライナーノーツ？用途によって全力の入り方変わるから、パパッと書き始めたい！なにからいこうか〜');
+                      setStepOutro('それじゃあ、RAION FMでの素晴らしい音楽をフルで楽しんでね。次の周波数まで、ステイ・エレクトリック！');
+                    }}
+                    className="px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-600 text-white hover:from-amber-600 hover:to-amber-700 text-[9px] font-black uppercase tracking-wider transition-all shadow-sm shadow-amber-500/15 cursor-pointer"
+                  >
+                    ⚡ Load "曇りの断層" Band Profile
+                  </button>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {generatedScript.map((step, idx) => {
@@ -759,7 +798,7 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
         </div>
       )}
 
-      {/* TAB CONTENT 3: MELODIES & SONG TONE LAB (FOR INVISIBLE & METALS) */}
+      {/* TAB CONTENT 3: MELODIES & SONG TONE LAB (FOR DESCENDING LOVE & METALS) */}
       {activeTab === 'melodies' && (
         <div className="space-y-6">
           
@@ -770,7 +809,7 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
                 TRACK ANATOMY LAB
               </span>
               <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[#293556] mt-2.5">
-                🎸 SONG SPEC SHEET: "Invisible" (インビジブル)
+                🎸 SONG SPEC SHEET: "DESCENDING LOVE" (落下する恋)
               </h3>
               <p className="text-zinc-500 text-xs font-semibold leading-relaxed mt-1">
                 A thorough physical gear, amp, and chord structure blueprint answering how to construct, record, and play the song.
@@ -909,7 +948,7 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
                 <span className="text-[8px] font-black tracking-widest text-[#A0886F] uppercase">Melody Notes in C Minor:</span>
                 <button
                   disabled={isPlayingMelodyLoop}
-                  onClick={playInvisibleMelodyHook}
+                  onClick={playDescendingLoveMelodyHook}
                   className="bg-cyan-500 hover:bg-cyan-600 text-black font-black text-[9px] tracking-widest uppercase px-4 py-2 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-cyan-500/10"
                 >
                   <Play size={10} fill="currentColor" /> {isPlayingMelodyLoop ? 'Playing Melody...' : 'Auto-Play Guitar Hook!'}
@@ -918,7 +957,7 @@ export default function RaionRadioView({ songs, onPlaySong, isAdmin = false }: R
 
               {/* Interactive Virtual Melody Chord Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                {invisibleNotes.map((note, idx) => (
+                {descendingLoveNotes.map((note, idx) => (
                   <button
                     key={idx}
                     onClick={() => handlePlayTone(note.freq)}

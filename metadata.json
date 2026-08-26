@@ -1,6 +1,6 @@
 {
   "name": "RAION 雷音",
-  "description": "The ultimate cross-cultural radio experience bridging Japanese Visual Kei, metal, J-Pop, K-Pop, and worldwide music with gamification and AI.",
+  "description": "The ultimate cross-cultural radio experience bridging Japanese Visual Kei, metal, J-Pop, K-Pop, and worldwide music with gamification and interactive radio.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

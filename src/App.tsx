@@ -22,17 +22,23 @@ import {
   Globe,
   Shield,
   Database,
-  Waves
+  Waves,
+  BarChart3,
+  FileAudio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import './lib/i18n.ts';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './lib/auth.tsx';
 import { dbService } from './services/dbService.ts';
+import { saveAudioBlob, deleteAudioBlob } from './services/audioStorage.ts';
 import { Song, Language, MusicDatabase } from './types.ts';
 import RaionRadioView from './components/RaionRadioView.tsx';
+import MusicAnalysisView from './components/MusicAnalysisView.tsx';
+import AnimeGameMovieGenreAnalysisView from './components/AnimeGameMovieGenreAnalysisView.tsx';
+import SongForm from './components/SongForm.tsx';
 
-type View = 'home' | 'search' | 'radio' | 'library' | 'games' | 'settings' | 'admin' | 'workspace' | 'raion_fm';
+type View = 'home' | 'search' | 'radio' | 'library' | 'games' | 'settings' | 'admin' | 'workspace' | 'raion_fm' | 'analysis' | 'genre_analysis';
 
 function RaionTextLogo({ size = 'small' }: { size?: 'small' | 'large' }) {
   const containerClass = size === 'large' ? 'gap-2' : 'gap-0.5 scale-[0.35] origin-center';
@@ -93,203 +99,6 @@ function RaionMascot({ size = 200 }: { size?: number }) {
       <path d="M95 160 Q100 155 105 160 Q100 170 95 160" fill="#FF83A4" />
       <path d="M135 155 Q140 150 145 155 Q140 165 135 155" fill="#FF83A4" />
     </svg>
-  );
-}
-
-function SongForm({ song, onSave, onCancel }: { song?: Partial<Song>, onSave: (song: Partial<Song>) => void, onCancel: () => void }) {
-  const [formData, setFormData] = useState({
-    songName: { en: '', ja: '', fr: '', es: '', zh: '', ko: '', it: '', ru: '' },
-    singerName: { en: '', ja: '', fr: '', es: '', zh: '', ko: '', it: '', ru: '' },
-    streamUrl: '',
-    artistOfficialUrl: '',
-    albumArtUrl: '',
-    duration: 180,
-    isActive: true,
-  });
-
-  useEffect(() => {
-    if (song) {
-      setFormData({
-        songName: {
-          en: song.songName?.en || '',
-          ja: song.songName?.ja || '',
-          fr: song.songName?.fr || '',
-          es: song.songName?.es || '',
-          zh: song.songName?.zh || '',
-          ko: song.songName?.ko || '',
-          it: song.songName?.it || '',
-          ru: song.songName?.ru || '',
-        },
-        singerName: {
-          en: song.singerName?.en || '',
-          ja: song.singerName?.ja || '',
-          fr: song.singerName?.fr || '',
-          es: song.singerName?.es || '',
-          zh: song.singerName?.zh || '',
-          ko: song.singerName?.ko || '',
-          it: song.singerName?.it || '',
-          ru: song.singerName?.ru || '',
-        },
-        streamUrl: song.streamUrl || '',
-        artistOfficialUrl: song.artistOfficialUrl || '',
-        albumArtUrl: song.albumArtUrl || '',
-        duration: song.duration || 180,
-        isActive: song.isActive ?? true,
-      });
-    } else {
-      setFormData({
-        songName: { en: '', ja: '', fr: '', es: '', zh: '', ko: '', it: '', ru: '' },
-        singerName: { en: '', ja: '', fr: '', es: '', zh: '', ko: '', it: '', ru: '' },
-        streamUrl: '',
-        artistOfficialUrl: '',
-        albumArtUrl: '',
-        duration: 180,
-        isActive: true,
-      });
-    }
-  }, [song]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-2xl font-black italic uppercase tracking-tight text-zinc-950">
-          {song ? '📝 Edit Song Profile' : '✨ Register New Track'}
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-zinc-400">Song Name (EN)</label>
-            <input 
-              required
-              className="w-full bg-zinc-50 border-none p-4 rounded-2xl font-bold"
-              value={formData.songName.en}
-              onChange={e => setFormData({ ...formData, songName: { ...formData.songName, en: e.target.value } })}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-zinc-400">Song Name (JA)</label>
-            <input 
-              className="w-full bg-zinc-50 border-none p-4 rounded-2xl font-bold font-noto"
-              value={formData.songName.ja}
-              onChange={e => setFormData({ ...formData, songName: { ...formData.songName, ja: e.target.value } })}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-zinc-400">Singer (EN)</label>
-            <input 
-              required
-              className="w-full bg-zinc-50 border-none p-4 rounded-2xl font-bold"
-              value={formData.singerName.en}
-              onChange={e => setFormData({ ...formData, singerName: { ...formData.singerName, en: e.target.value } })}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-zinc-400">Singer (JA)</label>
-            <input 
-              className="w-full bg-zinc-50 border-none p-4 rounded-2xl font-bold font-noto"
-              value={formData.singerName.ja}
-              onChange={e => setFormData({ ...formData, singerName: { ...formData.singerName, ja: e.target.value } })}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-zinc-400">Stream URL (Link)</label>
-          <input 
-            required
-            className="w-full bg-zinc-50 border-none p-4 rounded-2xl font-bold"
-            value={formData.streamUrl}
-            onChange={e => setFormData({ ...formData, streamUrl: e.target.value })}
-            placeholder="Direct audio link..."
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-zinc-400">Official Link (Artist official)</label>
-          <input 
-            className="w-full bg-zinc-50 border-none p-4 rounded-2xl font-bold"
-            value={formData.artistOfficialUrl}
-            onChange={e => setFormData({ ...formData, artistOfficialUrl: e.target.value })}
-            placeholder="https://..."
-          />
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <label className="text-[10px] font-black uppercase text-zinc-400">Icon Avatar / Album Art URL</label>
-            {formData.albumArtUrl && (
-              <span className="text-[8px] font-black tracking-widest text-[#293556] uppercase bg-cyan-100 px-2 py-0.5 rounded-full">Live Preview</span>
-            )}
-          </div>
-          
-          <div className="flex gap-4 items-center bg-zinc-100/50 p-4 rounded-3xl">
-            <div className="w-16 h-16 bg-white rounded-2xl overflow-hidden soft-shadow border border-zinc-200/60 flex-shrink-0 flex items-center justify-center">
-              {formData.albumArtUrl ? (
-                <img 
-                  src={formData.albumArtUrl} 
-                  alt="Preview" 
-                  className="w-full h-full object-cover" 
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=60' }} 
-                />
-              ) : (
-                <span className="text-zinc-400 text-[9px] font-bold uppercase text-center p-1">No Image</span>
-              )}
-            </div>
-            
-            <div className="flex-1 space-y-1">
-              <input 
-                className="w-full bg-white border-none p-3 rounded-xl font-bold text-xs text-zinc-800 focus:ring-2 focus:ring-cyan-500"
-                value={formData.albumArtUrl}
-                onChange={e => setFormData({ ...formData, albumArtUrl: e.target.value })}
-                placeholder="Enter custom image/avatar URL..."
-              />
-              <p className="text-[9px] text-zinc-400 font-medium">Provide a direct web link or choose a ready-to-use template below.</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-wider text-zinc-400 mb-2">Preset Curated Music Art templates:</p>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { name: 'Neon Synth', url: 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?w=400&auto=format&fit=crop&q=60' },
-                { name: 'Cassette Glow', url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=60' },
-                { name: 'Live Stage', url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=60' },
-                { name: 'Abstract Art', url: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=400&auto=format&fit=crop&q=60' },
-              ].map((template, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, albumArtUrl: template.url })}
-                  className="group relative h-10 bg-zinc-100 rounded-xl overflow-hidden border border-zinc-200 cursor-pointer hover:border-[#293556] active:scale-95 transition-all"
-                >
-                  <img src={template.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[7px] font-black tracking-tighter text-white uppercase text-center p-0.5 leading-none">{template.name.split(' ')[0]}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-4 pt-4">
-        <button type="submit" className="flex-1 bg-[#293556] text-white font-black p-5 rounded-[25px] uppercase tracking-widest text-xs">
-          Save Song Data
-        </button>
-        <button type="button" onClick={onCancel} className="bg-zinc-100 text-zinc-400 font-black px-8 rounded-[25px] uppercase tracking-widest text-xs">
-          Cancel
-        </button>
-      </div>
-    </form>
   );
 }
 
@@ -414,13 +223,43 @@ function MainLayout() {
   const [isAddingSong, setIsAddingSong] = useState(false);
   const [songToDelete, setSongToDelete] = useState<string | null>(null);
 
-  const handleSaveSong = async (songData: Partial<Song>) => {
+  const handleSaveSong = async (
+    songData: Partial<Song>,
+    audioFile?: File | null,
+    audioMeta?: { fileName: string; size: number; mimeType: string }
+  ) => {
+    let songId = editingSong?.id;
+    if (!songId) {
+      songId = 'song-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6);
+      songData.id = songId;
+    }
+
+    if (audioFile) {
+      const blobUrl = await saveAudioBlob(songId, audioFile, audioMeta?.fileName);
+      songData.streamUrl = blobUrl;
+      songData.isCustomAudio = true;
+      songData.audioFileName = audioMeta?.fileName || audioFile.name;
+      songData.audioFileSize = audioMeta?.size || audioFile.size;
+      songData.audioMimeType = audioMeta?.mimeType || audioFile.type;
+    } else if (songData.isCustomAudio === false && editingSong?.id) {
+      // If the song was switched to URL mode or local audio removed
+      await deleteAudioBlob(editingSong.id);
+    }
+
     if (editingSong?.id) {
       await dbService.updateSong(editingSong.id, songData);
     } else {
       await dbService.addSong(songData);
     }
     await fetchSongs(currentView === 'admin');
+    
+    if (currentSong && currentSong.id === songId) {
+      const updated = (await dbService.getSongs(true)).find(s => s.id === songId);
+      if (updated) {
+        setCurrentSong(updated);
+      }
+    }
+
     setIsAddingSong(false);
     setEditingSong(null);
   };
@@ -431,6 +270,7 @@ function MainLayout() {
 
   const confirmDeleteSong = async () => {
     if (songToDelete) {
+      await deleteAudioBlob(songToDelete);
       await dbService.deleteSong(songToDelete);
       setSongs(songs.filter(s => s.id !== songToDelete));
       setSongToDelete(null);
@@ -440,8 +280,10 @@ function MainLayout() {
   const navItems = [
     { id: 'home', icon: Home, label: t('home', 'Home') },
     { id: 'workspace', icon: Database, label: 'Workspace' },
-    { id: 'radio', icon: Radio, label: t('radio', 'Radio') },
+    { id: 'genre_analysis', icon: Sparkles, label: 'Genre AI' },
+    { id: 'analysis', icon: BarChart3, label: 'Analysis' },
     { id: 'raion_fm', icon: Waves, label: 'RAION 雷音' },
+    { id: 'radio', icon: Radio, label: t('radio', 'Radio') },
     { id: 'games', icon: Gamepad2, label: t('games', 'Games') },
     { id: 'library', icon: Library, label: t('library', 'Library') },
     { id: 'settings', icon: Settings, label: t('settings', 'Settings') },
@@ -590,8 +432,26 @@ function MainLayout() {
                 </div>
 
                 <div className="space-y-4">
-                  <h2 className="text-3xl font-black tracking-tighter">こんにちは、{user?.displayName || 'User'} 先生だよ</h2>
-                  <p className="text-zinc-500 font-medium">一緒に日本語ゲームを楽しもう。</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-3xl font-black tracking-tighter">こんにちは、{user?.displayName || 'User'} 先生だよ</h2>
+                      <p className="text-zinc-500 font-medium text-xs">一緒に日本語ゲームを楽しもう。Feel the Radio ION soundstream.</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                      <button
+                        onClick={() => setCurrentView('genre_analysis')}
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-3 rounded-full font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md cursor-pointer"
+                      >
+                        <Sparkles size={14} /> Genre AI Analysis
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('analysis')}
+                        className="bg-[#293556] hover:bg-[#1a233a] text-white px-5 py-3 rounded-full font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md cursor-pointer"
+                      >
+                        <BarChart3 size={14} /> Music Matrix
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -708,11 +568,22 @@ function MainLayout() {
                              <img src={song.albumArtUrl || `https://picsum.photos/seed/${song.id}/400`} alt="art" className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1 min-w-0">
-                             <h4 className="font-black italic uppercase truncate text-lg tracking-tight">
-                               {song.songName.en} <span className="text-zinc-300 mx-1">|</span> <span className="text-zinc-400 font-noto">{song.songName.ja}</span>
-                             </h4>
+                             <div className="flex items-center gap-2 flex-wrap">
+                               <h4 className="font-black italic uppercase truncate text-lg tracking-tight">
+                                 {song.songName.en} <span className="text-zinc-300 mx-1">|</span> <span className="text-zinc-400 font-noto">{song.songName.ja}</span>
+                               </h4>
+                               {song.isCustomAudio ? (
+                                 <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
+                                   <FileAudio size={10} /> Local Audio Master
+                                 </span>
+                               ) : (
+                                 <span className="bg-zinc-100 text-zinc-600 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
+                                   Stream URL
+                                 </span>
+                               )}
+                             </div>
                              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
-                               {song.singerName.en} • {song.duration}s
+                               {song.singerName.en} • {song.duration}s {song.audioFileName ? `• ${song.audioFileName}` : ''}
                              </p>
                           </div>
                           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -755,7 +626,7 @@ function MainLayout() {
 
             {currentView === 'workspace' && (
               <section className="space-y-8 py-6">
-                <div className="flex justify-between items-center bg-[#FFF4E4] p-8 rounded-[40px] soft-shadow">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#FFF4E4] p-8 rounded-[40px] soft-shadow gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 animate-pulse">
                       <span className="w-2.5 h-2.5 bg-green-500 rounded-full" />
@@ -766,7 +637,21 @@ function MainLayout() {
                       Select and explore any live database instance organized by band catalog, bands or music styles.
                     </p>
                   </div>
-                  <Database size={64} className="text-[#A0886F] opacity-35 flex-shrink-0" />
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={() => setCurrentView('genre_analysis')}
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md cursor-pointer"
+                    >
+                      <Sparkles size={15} /> Genre AI Analysis
+                    </button>
+                    <button
+                      onClick={() => setCurrentView('analysis')}
+                      className="bg-[#293556] hover:bg-[#1a233a] text-white px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-colors shadow-md cursor-pointer"
+                    >
+                      <BarChart3 size={15} /> Music Matrix
+                    </button>
+                    <Database size={56} className="text-[#A0886F] opacity-35 hidden sm:block flex-shrink-0" />
+                  </div>
                 </div>
 
                 {/* Database Switcher for Customer/User */}
@@ -865,6 +750,24 @@ function MainLayout() {
 
             {currentView === 'raion_fm' && (
               <RaionRadioView songs={songs} onPlaySong={handlePlaySong} isAdmin={!!profile?.isAdmin} />
+            )}
+
+            {currentView === 'genre_analysis' && (
+              <AnimeGameMovieGenreAnalysisView 
+                songs={songs} 
+                currentPlayingSong={currentSong} 
+                isPlaying={isPlaying} 
+                onPlaySong={handlePlaySong} 
+              />
+            )}
+
+            {currentView === 'analysis' && (
+              <MusicAnalysisView 
+                songs={songs} 
+                currentPlayingSong={currentSong} 
+                isPlaying={isPlaying} 
+                onPlaySong={handlePlaySong} 
+              />
             )}
 
             {currentView === 'settings' && (
